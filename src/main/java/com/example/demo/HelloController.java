@@ -11,12 +11,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
 
 
 public class HelloController {
-
-    public static double [] weight;
-    public static double bias;
+    static final double ALPHA =0.5;
+    static double [] weight;
+    static double bias;
     public Button btn1;
     public Button btn2;
     public Button btn3;
@@ -274,6 +275,7 @@ public class HelloController {
         btn17.setText(" ");
         btn18.setText(" ");
         btn19.setText(" ");
+        btn20.setText(" ");
         btn21.setText(" ");
         btn22.setText(" ");
         btn23.setText(" ");
@@ -415,10 +417,10 @@ public class HelloController {
         }
 
         String isXO = "";
+        test();
         double result = perceptron(input_array);
         if(result == 1) {
             isXO = "X";
-
             return isXO;
         }else if (result == -1){
             isXO ="O";
@@ -431,18 +433,20 @@ public class HelloController {
         }
 
 
+
     }
     public static void training(){
-        String fileName = "and-gate.txt"; // Replace with your file name
+
+        String fileName = "xo-data-for-bardi.txt"; // Replace with your file name
         List<double[]> data = new ArrayList<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
             String line;
             while ((line = br.readLine()) != null) {
                 String[] numbers = line.split("\\s+"); // Split by whitespace
-                double[] row = new double[numbers.length];
+                double[] row = new double [numbers.length];
                 for (int i = 0; i < numbers.length; i++) {
-                    row[i] = Double.parseDouble(numbers[i]);
+                    row[i] = Float.parseFloat(numbers[i]);
                 }
                 data.add(row);
             }
@@ -451,55 +455,47 @@ public class HelloController {
         }
 
         // Convert the List to a 2D array if needed
-        double[][] input_lists_and_targets = data.toArray(new double[data.size()][]);
-        final double ALPHA =1;
-        int epoch_length = input_lists_and_targets.length;
-        weight = new double[input_lists_and_targets[0].length - 1];
-        Arrays.fill(weight, 0);
+        double[][] list_of_inputs_and_targets = data.toArray(new double [data.size()][]);
 
+        weight = new double[list_of_inputs_and_targets[0].length - 1];
         bias = 0;
-        double total_epoch = 0;
+        int epoch_length = list_of_inputs_and_targets.length;
+        int total_epochs = 0;
 
-        double [] data_for_current_epoch = new double[input_lists_and_targets[0].length];
+        //the temp array for taking every line of the main array
         while (true){
-            double number_of_epoch_errors = 0;
-            for(int index_epoch= 0 ; index_epoch < epoch_length; index_epoch++){
-                for(int column_index = 0; column_index < input_lists_and_targets[0].length; column_index++){
-                    data_for_current_epoch[column_index] = input_lists_and_targets[index_epoch][column_index];
-                }
+            int number_of_errors_for_current_epoch = 0;
+            for(int epoch_index = 0 ; epoch_index < epoch_length ; epoch_index++){
+                double [] data_for_current_epoch = list_of_inputs_and_targets[epoch_index];
                 double net_input_for_current_epoch = 0;
-                for (int index_value = 0 ; index_value <data_for_current_epoch.length - 1 ; index_value++){
-                    net_input_for_current_epoch += (weight[index_value] * data_for_current_epoch[index_value]);
+                //calculating the net input
+                for(int value_index = 0 ; value_index < data_for_current_epoch.length -1 ; value_index++){
+                    net_input_for_current_epoch += weight[value_index] * data_for_current_epoch[value_index];
                 }
                 net_input_for_current_epoch += bias;
                 double f = activation_function(net_input_for_current_epoch);
-                if(f != data_for_current_epoch[data_for_current_epoch.length-1]){
-                    number_of_epoch_errors += 1;
-                    // updating the weights
-                    for(int index_value = 0 ; index_value < data_for_current_epoch.length - 1; index_value++){
-                        weight[index_value] += (data_for_current_epoch[index_value] * ALPHA * data_for_current_epoch[data_for_current_epoch.length -1 ]);
-                    }
-                    for (int i = 0 ; i < weight.length ; i++){
-                        System.out.println();
+                if(f != data_for_current_epoch[data_for_current_epoch.length -1]){
+                    number_of_errors_for_current_epoch += 1;
+                    // updating weights
+                    for(int value_index = 0 ; value_index < data_for_current_epoch.length -1 ; value_index++){
+                        weight[value_index] += data_for_current_epoch[value_index] * ALPHA * data_for_current_epoch[data_for_current_epoch.length - 1];
                     }
                     bias += ALPHA * data_for_current_epoch[data_for_current_epoch.length - 1];
                 }
-
             }
-            total_epoch += 1;
-            if(number_of_epoch_errors == 0 ){
-                System.out.println("Training Finished");
+            total_epochs += 1;
+            if (number_of_errors_for_current_epoch == 0){
+                System.out.println("Training finished!!!");
                 break;
             }
+
         }
         System.out.println("Weights are: ");
-        for(int i = 0 ; i < weight.length; i++){
-            System.out.println("w" + (i+1) + " is: " + weight[i]);
+        for(int i = 0 ; i < weight.length ; i++){
+            System.out.println("w" +(i+1) + " is: " + weight[i]);
         }
         System.out.println("Bias is: " + bias);
-        System.out.println("Total epoch is: " + total_epoch );
-
-
+        System.out.println("Total epoch is: " + total_epochs);
 
     }
 
@@ -508,29 +504,23 @@ public class HelloController {
 
 
 
-    public static double perceptron(double[][] main_inputs ) throws IOException {
-        double [] list_of_inputs = new double[main_inputs.length * main_inputs[0].length];
-        int i = 0;
-        for(int row = 0 ;row < main_inputs.length ; row++){
-            for(int column = 0 ; column < main_inputs[0].length; column++){
-                if(i < list_of_inputs.length){
-                    list_of_inputs[i] = main_inputs[row][column];
-                    i++;
-                }
+    public static double perceptron(double[][] input_array) throws IOException {
+        double [] inputs = new double[25];
+        for(int r = 0 ; r < 5 ; r++){
+            for(int c=0 ; c < 5 ; c++){
+                inputs[r*5 + c] = input_array[r][c];
             }
         }
-
-        double net_input = 0;
-        for( i = 0 ; i < weight.length ; i++){
-            net_input += weight[i] * list_of_inputs[i];
+        double net_input = bias;
+        for(int i = 0 ; i < 25 ; i++){
+            net_input += weight[i] * inputs[i];
         }
 
-        net_input += bias;
         return activation_function(net_input);
     }
 
-    public static int activation_function(double net_input){
-        final double THETA = 0.2;
+    public static double activation_function(double net_input){
+        final double THETA = 1;
         if(net_input > THETA){
             return 1;
         } else if (net_input < (-THETA)) {
@@ -538,6 +528,42 @@ public class HelloController {
         }else{
             return  0;
         }
+    }
+
+
+    public static void test(){
+        double success_rate = 0;
+        String fileName = "test.txt"; // Replace with your file name
+        List<double[]> data = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] numbers = line.split("\\s+"); // Split by whitespace
+                double[] row = new double [numbers.length];
+                for (int i = 0; i < numbers.length; i++) {
+                    row[i] = Float.parseFloat(numbers[i]);
+                }
+                data.add(row);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        double[][] test_inputs = data.toArray(new double [data.size()][]);
+        for(int i = 0; i < test_inputs.length ; i++){
+            double expected_result = test_inputs[i][25];
+            double net_input = bias;
+            for(int j = 0 ; j < 25 ; j++){
+                net_input += weight[j] * test_inputs[i][j];
+            }
+            double f = activation_function(net_input);
+            if(f == expected_result){
+                 success_rate ++;
+            }
+        }
+        System.out.println((success_rate) /((double) test_inputs.length )+ " is success rate!");
+
     }
 
 
